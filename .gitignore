@@ -1,0 +1,8 @@
+*.json
+test.py
+requirement.txt
+
+#virtual envs
+
+.venv/
+__pycache__/
