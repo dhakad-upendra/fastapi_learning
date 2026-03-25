@@ -1,12 +1,40 @@
-from pydantic import BaseModel
-from typing import List, Dict
+from pydantic import BaseModel, Field , AnyUrl, EmailStr, field_validator
+from typing import List, Dict, Optional, Annotated
+
+
+
+
 class patient(BaseModel):
     name: str
     age: int
-    weight: float
+    weight: Annotated[float, Field(gt=0, description="Weight must be greater than 0")] #this is validating that weight should be a positive float   
     married: bool
-    allergies: List[str]
-    contact_info: Dict [str, str]
+    allergies:Optional[List[str]] = None #this is validating that allergies should be a list of strings
+    #optional is used to make the allergies field optional, meaning it can be omitted when creating a patient object. If provided, it must be a list of strings.
+
+    contact_info: Dict [str, str] #this is validating that contact_info should be a dictionary with string keys and string values
+
+
+#field validator is used to validate the fields of a pydentic model. Here we are validating whether the email is of a valid bank domain or not...
+
+    @field_validator('email')
+    @classmethod
+    def validate_email( cls, value):
+        valid_domains = ['hdfc.com', 'icici.com', 'sbi.com']
+        domain = value.split('@')[-1]
+
+        if domain not in valid_domains:
+            raise ValueError(f"Email domain must be one of the following: {', '.join(valid_domains)}")
+        return value
+
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, value):
+        return value.upper() 
+    #this is validating that the name should be in uppercase letters. The value.upper() method converts the input name to uppercase before returning it.
+    
+    
 
 
 
