@@ -7,6 +7,8 @@ from typing import List, Dict, Optional, Annotated, Literal
 
 app = FastAPI()
 
+
+#pydentic model for patient record
 class Patient(BaseModel):
 
     id : Annotated[str, Field(..., description="The ID of the patient", examples=['P001'])]
@@ -38,7 +40,14 @@ class Patient(BaseModel):
             return "Obese"
 
 
-
+#pydentic model for patient update (all fields optional)
+class patient_edit(BaseModel):
+    name: Annotated[Optional[str], Field(..., description="The name of thepatient", examples=['John Doe'])]
+    city: Annotated[Optional[str], Field(..., description="The city of the patient", examples=['Delhi'])]
+    age: Annotated[Optional[int], Field(..., description="The age of the patient", examples=[30])]
+    gender: Annotated[Optional[Literal['male', 'female', 'other']], Field(..., description="The gender of the patient")]
+    height : Annotated[Optional[float], Field(..., gt =0, description="The height of the patient in meters", examples=[1.75])]
+    weight : Annotated[Optional[float], Field(..., gt =0,  description="The weight of the patient in kilograms", examples=[70.0])]
 
 
 def load_patients():
@@ -94,6 +103,7 @@ def sort_patients(sort_by: str = Query(... , description = "Sort on basis of hei
     return sorted_data
 
 
+#endpoint to create a new patient record
 
 @app.post('/create')
 def create_patient(patient: Patient):
@@ -114,3 +124,46 @@ def create_patient(patient: Patient):
     save_patients(data)
 
     return JSONResponse(content={"message": "Patient created successfully"}, status_code = 201)
+
+
+#endpoint to update an existing patient record
+
+@app.put('/edit/{patient_id}')
+def edit_patient(patient_id : str, patient_update : patient_edit):
+    data = load_patients()
+
+    if patient_id not in data:
+        raise HTTPException(status_code = 404, detail = "Patient not found")
+     
+
+    #update the patient record with the new data
+    existing_patient_info = data[patient_id]
+
+    updated_patient_info = patient_update.model_dump(exclude_unset = True)
+    for key, value in updated_patient_info.items():
+        existing_patient_info[key] = value
+
+  
+  #doing this to calculate the bmi and verdict again after update
+    existing_patient_info['id'] = patient_id
+    updated_patient_obj = Patient(**existing_patient_info)
+
+    data[patient_id] = updated_patient_obj.model_dump(exclude={'id'})
+
+    save_patients(data)
+
+    return JSONResponse(status_code=200,content={"message": "Patient record updated successfully"})
+
+
+@app.delete('/delete/{patient_id}')
+def delete_patient(patient_id: str):
+    data = load_patients()
+
+    if patient_id not in data:
+        raise HTTPException(status_code = 404, detail = "Patient not found")
+    
+    del data[patient_id]
+
+    save_patients(data)
+
+    return JSONResponse(status_code=200, content={"message": "Patient record deleted successfully"})
